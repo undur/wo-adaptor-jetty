@@ -23,6 +23,7 @@ import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,7 +176,9 @@ public class WOAdaptorJetty extends WOAdaptor {
 	 * @return Our default way of constructing a server, if the user doesn't provide his own
 	 */
 	private static Server createDefaultJettyServer( int port ) {
-		Server server = new Server();
+		final QueuedThreadPool threadPool = new QueuedThreadPool();
+		threadPool.setVirtualThreadsExecutor( java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() );
+		Server server = new Server( threadPool );
 
 		final HttpConfiguration config = new HttpConfiguration();
 		config.setSendServerVersion( false ); // Not sending the server software/version is good practice for security
