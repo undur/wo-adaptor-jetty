@@ -332,7 +332,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 			final Map<String, List<String>> map = new HashMap<>();
 
 			for( final HttpField httpField : jettyRequest.getHeaders() ) {
-				map.put( httpField.getName(), httpField.getValueList() );
+				map.put( httpField.getName(), List.of( httpField.getValue() ) );
 			}
 
 			return map;
