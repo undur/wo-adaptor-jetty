@@ -177,6 +177,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 	 */
 	private static Server createDefaultJettyServer( int port ) {
 		final QueuedThreadPool threadPool = new QueuedThreadPool();
+		threadPool.setMaxThreads( 200 ); // FIXME: Make configurable
 		threadPool.setVirtualThreadsExecutor( java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() );
 		Server server = new Server( threadPool );
 
