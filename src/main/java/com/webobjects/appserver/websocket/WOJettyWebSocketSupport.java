@@ -18,8 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.webobjects.appserver.WOAdaptorJetty;
 import com.webobjects.appserver.WOApplication;
 import com.webobjects.appserver.WORequest;
-
-import er.extensions.foundation.ERXProperties;
+import com.webobjects.foundation.NSProperties;
 
 public class WOJettyWebSocketSupport {
 
@@ -28,7 +27,7 @@ public class WOJettyWebSocketSupport {
 	/**
 	 * WebSocket idle timeout in seconds Set to 0 for no timeout.
 	 */
-	private static final int WEBSOCKET_IDLE_TIMEOUT_SECONDS = ERXProperties.intForKeyWithDefault( "JettyWebSocketIdleTimeout", 0 );
+	private static final int WEBSOCKET_IDLE_TIMEOUT_SECONDS = NSProperties.stringForKey( "JettyWebSocketIdleTimeout" ) != null ? NSProperties.integerForKey( "JettyWebSocketIdleTimeout" ) : 0;
 
 	/**
 	 * Creates a handler that supports both HTTP and WebSocket requests.

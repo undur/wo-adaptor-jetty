@@ -12,15 +12,6 @@
 	</properties>
 
 	<dependencies>
-		<!--
-			We need to include ERExtensions to get the additions to the WOCookie API.
-			Scoped as provided to ensure we don't mess with a using project's wonder version -->
-		<dependency>
-			<groupId>wonder.core</groupId>
-			<artifactId>ERExtensions</artifactId>
-			<version>8.0.0.slim-SNAPSHOT</version>
-			<scope>provided</scope>
-		</dependency>
 		<dependency>
 			<groupId>com.webobjects</groupId>
 			<artifactId>JavaWebObjects</artifactId>
