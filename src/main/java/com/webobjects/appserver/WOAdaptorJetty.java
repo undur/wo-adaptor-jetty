@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -402,8 +403,31 @@ public class WOAdaptorJetty extends WOAdaptor {
 		private static Map<String, List<String>> headerMapFromJettyRequest( final Request jettyRequest ) {
 			final Map<String, List<String>> map = new HashMap<>();
 
+			// Single pass over the fields, accumulating ALL values for a given header name.
+			//
+			// A request can legitimately carry the same header name more than once (e.g. multiple Cookie lines). The
+			// obvious `map.put( name, List.of( value ) )` OVERWRITES on the second occurrence, silently dropping all but the
+			// last value. So on a repeat we merge into a growable list instead. The common case (every name unique) still
+			// costs just one List.of() per field, so this stays cheap.
+			//
+			// Note: we deliberately use HttpField.getValue() (the raw single value), NOT getValueList(), because the latter
+			// splits a single header's value on commas before WO sees it, corrupting values that legitimately contain commas
+			// (cookies, dates, etc). See commit cef4670.
 			for( final HttpField httpField : jettyRequest.getHeaders() ) {
-				map.put( httpField.getName(), List.of( httpField.getValue() ) );
+				final String name = httpField.getName();
+				final String value = httpField.getValue();
+
+				final List<String> existing = map.get( name );
+
+				if( existing == null ) {
+					map.put( name, List.of( value ) );
+				}
+				else {
+					// Second (or later) occurrence of this name: replace the immutable singleton with a growable list
+					final List<String> merged = new ArrayList<>( existing );
+					merged.add( value );
+					map.put( name, merged );
+				}
 			}
 
 			return map;
