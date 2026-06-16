@@ -22,6 +22,7 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.QoSHandler;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSData;
 import com.webobjects.foundation.NSDictionary;
 import com.webobjects.foundation.NSForwardException;
+import com.webobjects.foundation.NSProperties;
 
 /**
  * A WOAdaptor based on Jetty.
@@ -177,7 +179,15 @@ public class WOAdaptorJetty extends WOAdaptor {
 	 */
 	private static Server createDefaultJettyServer( int port ) {
 		final QueuedThreadPool threadPool = new QueuedThreadPool();
-		threadPool.setMaxThreads( 200 ); // FIXME: Make configurable
+
+		// NOTE: We deliberately do NOT call threadPool.setMaxThreads(...) here.
+		//
+		// When a virtualThreadsExecutor is set on a QueuedThreadPool, the QTP's own *platform* threads remain the I/O
+		// carriers/producers (accept + select + the EatWhatYouKill produce loop); actual request handling is offloaded to
+		// virtual threads spawned by newVirtualThreadPerTaskExecutor(). So maxThreads would bound the carrier/producer
+		// threads, NOT the number of concurrent request-handling virtual threads. A previous setMaxThreads(200) here looked
+		// like it limited concurrency but did not (request handling stayed unbounded) and could starve the I/O producers
+		// under high connection counts. Real concurrency backpressure is provided by the QoSHandler below instead.
 		threadPool.setVirtualThreadsExecutor( java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() );
 		Server server = new Server( threadPool );
 
@@ -191,9 +201,20 @@ public class WOAdaptorJetty extends WOAdaptor {
 		// connector.setHost( null ); // FIXME: WOHost? // Hugi 2025-11-15
 		server.addConnector( connector );
 
+		// The actual WO request handler...
 		Handler handler = new WOJettyHandler();
 
-		// If websockets are enabled, we wrap the handler with WS upgrade capabilities
+		// ...optionally fronted by a QoSHandler that bounds how many requests are dispatched into WO concurrently.
+		// Without this, every incoming request spawns a virtual thread that calls straight into dispatchRequest(), so
+		// concurrency is unbounded - a traffic spike (or a slow downstream) can exhaust the DB connection pool, heap, etc.
+		// The QoSHandler admits up to JettyMaxConcurrentRequests at a time and *queues* the rest (rather than failing them),
+		// which is exactly the backpressure we want. Queued requests are suspended, not blocked on a thread, so this plays
+		// nicely with virtual threads.
+		handler = withQoSBackpressure( handler );
+
+		// If websockets are enabled, we wrap the handler with WS upgrade capabilities. This MUST sit outside (in front of)
+		// the QoSHandler: a WebSocket upgrade opens a long-lived connection, not a request/response unit of work, so it must
+		// not consume one of the QoS permits (it would hold it for the lifetime of the socket and never give it back).
 		if( ENABLE_WEBSOCKETS ) {
 			handler = WOJettyWebSocketSupport.createWebSocketHandler( server, handler );
 		}
@@ -201,6 +222,52 @@ public class WOAdaptorJetty extends WOAdaptor {
 		server.setHandler( handler );
 
 		return server;
+	}
+
+	/**
+	 * Property: maximum number of requests dispatched into WO concurrently. 0 (the default) means unlimited - i.e. no
+	 * backpressure, preserving the historical behaviour unless an app opts in. Recommended sizing is roughly your DB
+	 * connection pool size / downstream capacity; too low throttles throughput, too high defeats the purpose.
+	 */
+	private static final int MAX_CONCURRENT_REQUESTS = NSProperties.integerForKey( "JettyMaxConcurrentRequests" );
+
+	/**
+	 * Property: maximum number of requests allowed to wait in the QoS queue once the concurrency limit is reached. Beyond
+	 * this, excess requests are rejected (503) rather than queued, bounding memory under overload. 0 (default) = unlimited.
+	 */
+	private static final int MAX_SUSPENDED_REQUESTS = NSProperties.integerForKey( "JettyMaxSuspendedRequests" );
+
+	/**
+	 * Property: how long (seconds) a request may wait in the QoS queue before timing out. 0 (default) = no timeout.
+	 */
+	private static final int MAX_SUSPEND_SECONDS = NSProperties.integerForKey( "JettyMaxSuspendSeconds" );
+
+	/**
+	 * Wrap the given handler in a QoSHandler if (and only if) a concurrency limit has been configured. When
+	 * JettyMaxConcurrentRequests is 0 we return the handler untouched, so there's zero added overhead for apps that
+	 * haven't opted in to backpressure.
+	 */
+	private static Handler withQoSBackpressure( final Handler handler ) {
+
+		if( MAX_CONCURRENT_REQUESTS <= 0 ) {
+			logger.info( "JettyMaxConcurrentRequests not set; request concurrency into WO is unbounded (no backpressure)" );
+			return handler;
+		}
+
+		final QoSHandler qos = new QoSHandler( handler );
+		qos.setMaxRequestCount( MAX_CONCURRENT_REQUESTS );
+
+		if( MAX_SUSPENDED_REQUESTS > 0 ) {
+			qos.setMaxSuspendedRequestCount( MAX_SUSPENDED_REQUESTS );
+		}
+
+		if( MAX_SUSPEND_SECONDS > 0 ) {
+			qos.setMaxSuspend( java.time.Duration.ofSeconds( MAX_SUSPEND_SECONDS ) );
+		}
+
+		logger.info( "QoS backpressure enabled: maxConcurrentRequests={}, maxSuspendedRequests={}, maxSuspendSeconds={}", MAX_CONCURRENT_REQUESTS, MAX_SUSPENDED_REQUESTS, MAX_SUSPEND_SECONDS );
+
+		return qos;
 	}
 
 	public static class WOJettyHandler extends Handler.Abstract {
