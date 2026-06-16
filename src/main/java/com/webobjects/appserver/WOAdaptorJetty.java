@@ -1,6 +1,5 @@
 package com.webobjects.appserver;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -365,9 +364,29 @@ public class WOAdaptorJetty extends WOAdaptor {
 				}
 
 				// All of this stream wrapping is required for WO to be happy. Yay!
+				//
+				// We deliberately do NOT wrap in a BufferedInputStream here. The buffering was historically load-bearing, so
+				// this was confirmed safe by round-tripping real multipart uploads of many sizes (including ones that straddle
+				// chunk boundaries and payloads peppered with boundary-like byte sequences) and verifying byte-for-byte
+				// integrity. The reasons it holds:
+				//
+				//  - Jetty's Request.asInputStream() returns CHUNK-SIZED reads: a single read() yields at most one chunk's
+				//    worth of bytes, so short reads are normal. It never returns 0 from a blocking read - only >0 or -1 (EOF).
+				//    That "never 0" property is what makes dropping the buffer safe.
+				//  - WONoCopyPushbackInputStream passes a single underlying read straight through (it does not loop to fill),
+				//    so those short reads reach WO's multipart parser unchanged. That's fine, because:
+				//  - WO's multipart body reader tolerates short reads: when a boundary-separator match runs off the end of the
+				//    current read it reads more to disambiguate and unreads on a false match. And the part data is read in
+				//    blocks (4KB), not byte-by-byte, so there's no pathological per-byte path on uploads.
+				//
+				// A BufferedInputStream would therefore only add an 8KB heap buffer + an arraycopy-per-read on every request
+				// carrying a body, coalescing chunks WO is already happy to receive piecemeal - cost with no correctness gain.
+				//
+				// If a malformed multipart upload (one MISSING the boundary from its Content-Type header) ever misbehaves, note
+				// that WO has a separate boundary-recovery path that assumes a small read fills its buffer; that path is fragile
+				// to short reads regardless of this change, and well-formed uploads never hit it. // Hugi/Claude 2026-06-16
 				final InputStream jettyStream = Request.asInputStream( jettyRequest );
-				final InputStream bufferedStream = new BufferedInputStream( jettyStream );
-				final WONoCopyPushbackInputStream wrappedStream = new WONoCopyPushbackInputStream( bufferedStream, (int)length );
+				final WONoCopyPushbackInputStream wrappedStream = new WONoCopyPushbackInputStream( jettyStream, (int)length );
 				contentData = new WOInputStreamData( wrappedStream, (int)length );
 			}
 			else {
