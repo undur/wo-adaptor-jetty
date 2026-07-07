@@ -198,6 +198,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 
 		final ServerConnector connector = new ServerConnector( server, connectionFactory );
 		connector.setPort( port );
+		connector.setIdleTimeout( CONNECTOR_IDLE_TIMEOUT_SECONDS * 1000L );
 		// connector.setHost( null ); // FIXME: WOHost? // Hugi 2025-11-15
 		server.addConnector( connector );
 
@@ -222,6 +223,25 @@ public class WOAdaptorJetty extends WOAdaptor {
 		server.setHandler( handler );
 
 		return server;
+	}
+
+	/**
+	 * Property: how long (seconds) an idle connection is kept open before Jetty closes it. Default 600 (10 minutes).
+	 *
+	 * The default is deliberately GENEROUS - far above Jetty's own 30-second default - because a fronting
+	 * proxy/adaptor (Apache mod_proxy, the classic WO Apache adaptor) POOLS connections to the app and reuses
+	 * them after arbitrary idle gaps. The classic WO adaptor in particular was designed against apps whose
+	 * adaptor-facing connections never closed. With a short idle timeout, every quiet period leaves the
+	 * front-end's pool full of connections we have FIN'd; the next request to reuse one fails or stalls -
+	 * experienced as "a user's first request after a quiet spell hangs, sometimes". Size this ABOVE the
+	 * front-end's connection reuse ttl (or its idle limit); set it lower only for apps exposed directly to
+	 * the internet (where lingering idle connections are a resource-exhaustion concern).
+	 */
+	private static final int CONNECTOR_IDLE_TIMEOUT_SECONDS = connectorIdleTimeoutSeconds();
+
+	private static int connectorIdleTimeoutSeconds() {
+		final int configured = NSProperties.integerForKey( "JettyConnectorIdleTimeoutSeconds" );
+		return configured > 0 ? configured : 600;
 	}
 
 	/**
