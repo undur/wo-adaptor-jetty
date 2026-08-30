@@ -199,6 +199,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 		final ServerConnector connector = new ServerConnector( server, connectionFactory );
 		connector.setPort( port );
 		connector.setIdleTimeout( CONNECTOR_IDLE_TIMEOUT_SECONDS * 1000L );
+		connector.setAcceptQueueSize( LISTEN_QUEUE_SIZE );
 		// connector.setHost( null ); // FIXME: WOHost? // Hugi 2025-11-15
 		server.addConnector( connector );
 
@@ -242,6 +243,21 @@ public class WOAdaptorJetty extends WOAdaptor {
 	private static int connectorIdleTimeoutSeconds() {
 		final int configured = NSProperties.integerForKey( "JettyConnectorIdleTimeoutSeconds" );
 		return configured > 0 ? configured : 600;
+	}
+
+	/**
+	 * Property: the listen socket's accept queue (backlog) size, honoring WO's classic WOListenQueueSize property —
+	 * JavaMonitor's "Listen Queue Size" setting reaches the actual socket. Left unconfigured, Jetty's acceptQueueSize
+	 * default of 0 makes the JDK fall back to ITS default of 50, which overflows easily under connection bursts (a
+	 * crawler fleet, a proxy opening connections in parallel). Overflow on loopback connections fails with an instant
+	 * "connection refused" rather than a SYN retry, so a front-end on the same host sees the instance as briefly dead.
+	 * Default 511 (the conventional just-below-somaxconn value) when the property is unset.
+	 */
+	private static final int LISTEN_QUEUE_SIZE = listenQueueSize();
+
+	private static int listenQueueSize() {
+		final int configured = NSProperties.integerForKey( "WOListenQueueSize" );
+		return configured > 0 ? configured : 511;
 	}
 
 	/**
