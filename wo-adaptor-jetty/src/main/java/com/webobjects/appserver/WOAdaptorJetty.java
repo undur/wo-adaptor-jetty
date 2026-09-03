@@ -15,10 +15,12 @@ import java.util.ServiceLoader;
 
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.io.Content;
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.ConnectionMetaData;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.NetworkConnector;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
@@ -133,9 +135,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 			_server.start();
 
 			if( _port == 0 ) {
-				// FIXME: We probably need to check if the connector is a ServerConnector. Or if the server has any connectors at all // Hugi 2025-11-16
-				final ServerConnector connector = (ServerConnector)_server.getConnectors()[0];
-				_port = connector.getLocalPort();
+				_port = discoverPort( _server );
 				WOApplication.application().setPort( _port );
 				logger.info( "Running on port %s".formatted( _port ) );
 			}
@@ -147,6 +147,23 @@ public class WOAdaptorJetty extends WOAdaptor {
 			e.printStackTrace();
 			System.exit( -1 );
 		}
+	}
+
+	/**
+	 * When no WOPort was given (port 0), Jetty picks a free port and we have to find out which one it chose, since WO uses
+	 * the port to construct direct-connect URLs. Only network connectors have a local port, so we take the first one of
+	 * those. With a server supplied via JettyServerProvider there may be none - no connectors at all, or only non-network
+	 * ones (in-memory, unix domain sockets, ...) - in which case there is nothing to discover and WO would silently be left
+	 * believing its port is 0. That is not a state this adaptor knows how to serve from, so we fail at startup instead.
+	 */
+	private static int discoverPort( final Server server ) {
+		for( final Connector connector : server.getConnectors() ) {
+			if( connector instanceof NetworkConnector networkConnector ) {
+				return networkConnector.getLocalPort();
+			}
+		}
+
+		throw new IllegalStateException( "WOPort is not set (port 0) and the Jetty server has no network connector to discover the port from. Either set WOPort, or make sure the server provided by JettyServerProvider has a network connector" );
 	}
 
 	/**
