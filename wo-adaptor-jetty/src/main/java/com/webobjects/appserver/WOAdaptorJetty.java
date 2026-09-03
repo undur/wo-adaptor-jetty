@@ -15,8 +15,8 @@ import java.util.ServiceLoader;
 
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.io.Content;
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.ConnectionMetaData;
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -49,6 +49,13 @@ import com.webobjects.foundation.NSProperties;
 public class WOAdaptorJetty extends WOAdaptor {
 
 	private static final Logger logger = LoggerFactory.getLogger( WOAdaptorJetty.class );
+
+	/**
+	 * userInfo key marking a WOResponse as "unhandled": WO had no answer for the request (typically a route miss) and the
+	 * request should fall through to the next handler in the Jetty chain - for instance an ng-objects handler serving
+	 * alongside WO in the same server.
+	 */
+	public static final String UNHANDLED_RESPONSE_KEY = "wo-unhandled-response";
 
 	/**
 	 * The Jetty server instance
@@ -346,8 +353,8 @@ public class WOAdaptorJetty extends WOAdaptor {
 			// This is where the application logic will perform it's actual work
 			final WOResponse woResponse = WOApplication.application().dispatchRequest( woRequest );
 
-			// FIXME: Experimental functionality for passing control through to JEtty
-			if( woResponse.userInfoForKey( "wo-unhandled-response" ) != null ) {
+			// WO declined this request: discard its response and let the next handler in the chain have a go (see UNHANDLED_RESPONSE_KEY)
+			if( woResponse.userInfoForKey( UNHANDLED_RESPONSE_KEY ) != null ) {
 				return false;
 			}
 
