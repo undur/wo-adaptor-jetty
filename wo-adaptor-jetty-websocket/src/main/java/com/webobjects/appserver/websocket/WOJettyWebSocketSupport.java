@@ -15,12 +15,23 @@ import org.eclipse.jetty.websocket.server.WebSocketUpgradeHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.webobjects.appserver.JettyHandlerDecorator;
 import com.webobjects.appserver.WOAdaptorJetty;
 import com.webobjects.appserver.WOApplication;
 import com.webobjects.appserver.WORequest;
 import com.webobjects.foundation.NSProperties;
 
-public class WOJettyWebSocketSupport {
+public class WOJettyWebSocketSupport implements JettyHandlerDecorator {
+
+	/**
+	 * ServiceLoader entry point (registered in META-INF/services): wo-adaptor-jetty discovers this and lets us wrap its
+	 * handler chain with WebSocket upgrade support. This is what makes WebSockets "on" merely by having this module on the
+	 * classpath - no configuration needed.
+	 */
+	@Override
+	public Handler decorate( final Server server, final Handler inner ) {
+		return createWebSocketHandler( server, inner );
+	}
 
 	private static final Logger logger = LoggerFactory.getLogger( WOJettyWebSocketSupport.class );
 

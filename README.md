@@ -14,6 +14,20 @@ Build/install and add as a dependency to your app. Then pass the launch argument
 </dependency>
 ```
 
+### WebSockets (experimental)
+
+WebSocket support lives in a separate module. Adding it to your classpath is all it takes: the adaptor discovers it automatically and enables WebSocket upgrades in its default server, with nothing to configure. The two modules are released together and must be used at the same version.
+
+```xml
+<dependency>
+	<groupId>is.rebbi</groupId>
+	<artifactId>wo-adaptor-jetty-websocket</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+Register endpoints from your `Application` class with `WOWebSocketRegistry.register( "/ws/chat", ChatHandler.class )`. If you build your own Jetty server through `JettyServerProvider`, wrap your handler with `WOJettyWebSocketSupport.createWebSocketHandler( server, handler )` yourself, since the automatic discovery only applies to the default server.
+
 ## Why?
 
 * WebSockets.

@@ -3,35 +3,46 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>is.rebbi</groupId>
-	<artifactId>wo-adaptor-jetty</artifactId>
+	<artifactId>wo-adaptor-jetty-reactor</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>wo-adaptor-jetty</name>
+	<packaging>pom</packaging>
+	<name>wo-adaptor-jetty reactor</name>
 
 	<properties>
 		<maven.compiler.release>25</maven.compiler.release>
+		<jetty.version>12.1.12</jetty.version>
+		<webobjects.version>5.4.3</webobjects.version>
 	</properties>
 
-	<dependencies>
-		<dependency>
-			<groupId>com.webobjects</groupId>
-			<artifactId>JavaWebObjects</artifactId>
-			<version>5.4.3</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.webobjects</groupId>
-					<artifactId>JavaXML</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-server</artifactId>
-			<version>12.1.12</version>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jetty.websocket</groupId>
-			<artifactId>jetty-websocket-jetty-server</artifactId>
-			<version>12.1.12</version>
-		</dependency>
-	</dependencies>
+	<!-- The modules share this reactor's version: a given version of wo-adaptor-jetty-websocket is built and tested against the same version of wo-adaptor-jetty -->
+	<modules>
+		<module>wo-adaptor-jetty</module>
+		<module>wo-adaptor-jetty-websocket</module>
+	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.webobjects</groupId>
+				<artifactId>JavaWebObjects</artifactId>
+				<version>${webobjects.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>com.webobjects</groupId>
+						<artifactId>JavaXML</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-server</artifactId>
+				<version>${jetty.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.jetty.websocket</groupId>
+				<artifactId>jetty-websocket-jetty-server</artifactId>
+				<version>${jetty.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 </project>

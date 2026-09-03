@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.ServiceLoader;
 
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.io.Content;
@@ -31,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import com.webobjects.appserver._private.WOInputStreamData;
 import com.webobjects.appserver._private.WONoCopyPushbackInputStream;
 import com.webobjects.appserver._private.WOProperties;
-import com.webobjects.appserver.websocket.WOJettyWebSocketSupport;
 import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSData;
 import com.webobjects.foundation.NSDictionary;
@@ -47,13 +47,6 @@ import com.webobjects.foundation.NSProperties;
 public class WOAdaptorJetty extends WOAdaptor {
 
 	private static final Logger logger = LoggerFactory.getLogger( WOAdaptorJetty.class );
-
-	/**
-	 * Flip this to turn websockets on/off
-	 *
-	 *  FIXME: This should be configurable in a nicer way // Hugi 2025-11-13
-	 */
-	private static final boolean ENABLE_WEBSOCKETS = true;
 
 	/**
 	 * The Jetty server instance
@@ -214,12 +207,10 @@ public class WOAdaptorJetty extends WOAdaptor {
 		// nicely with virtual threads.
 		handler = withQoSBackpressure( handler );
 
-		// If websockets are enabled, we wrap the handler with WS upgrade capabilities. This MUST sit outside (in front of)
-		// the QoSHandler: a WebSocket upgrade opens a long-lived connection, not a request/response unit of work, so it must
-		// not consume one of the QoS permits (it would hold it for the lifetime of the socket and never give it back).
-		if( ENABLE_WEBSOCKETS ) {
-			handler = WOJettyWebSocketSupport.createWebSocketHandler( server, handler );
-		}
+		// Finally, let optional modules wrap the chain. Decorators sit OUTSIDE (in front of) the QoSHandler on purpose: a
+		// WebSocket upgrade, for example, opens a long-lived connection rather than a request/response unit of work, so it
+		// must not consume a QoS permit (it would hold it for the lifetime of the socket and never give it back).
+		handler = applyHandlerDecorators( server, handler );
 
 		server.setHandler( handler );
 
@@ -304,6 +295,24 @@ public class WOAdaptorJetty extends WOAdaptor {
 		logger.info( "QoS backpressure enabled: maxConcurrentRequests={}, maxSuspendedRequests={}, maxSuspendSeconds={}", MAX_CONCURRENT_REQUESTS, MAX_SUSPENDED_REQUESTS, MAX_SUSPEND_SECONDS );
 
 		return qos;
+	}
+
+	/**
+	 * Apply every JettyHandlerDecorator found on the classpath (via ServiceLoader) around the given handler. Decorators form
+	 * the outermost layer of the chain, so they see each request before the QoS handler and WO do. This is how optional
+	 * modules plug themselves in: wo-adaptor-jetty-websocket, for instance, contributes the WebSocket upgrade handler this
+	 * way, so merely having it on the classpath enables WebSockets - there is no flag to flip.
+	 */
+	private static Handler applyHandlerDecorators( final Server server, Handler handler ) {
+
+		// Load through this class's own loader rather than the thread context loader: decorator jars live on the same
+		// classpath as the adaptor, and the context loader is not guaranteed to be anything meaningful at server-build time
+		for( final JettyHandlerDecorator decorator : ServiceLoader.load( JettyHandlerDecorator.class, WOAdaptorJetty.class.getClassLoader() ) ) {
+			logger.info( "Applying handler decorator {}", decorator.getClass().getName() );
+			handler = decorator.decorate( server, handler );
+		}
+
+		return handler;
 	}
 
 	public static class WOJettyHandler extends Handler.Abstract {
