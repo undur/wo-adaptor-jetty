@@ -420,7 +420,10 @@ public class WOAdaptorJetty extends WOAdaptor {
 
 			if( length > 0 ) {
 
-				// FIXME: Missing support for larger request bodies (limitations imposed by WONoCopyPushbackInputStream and WOInputStreamData) // Hugi 2025-11-15
+				// Request bodies larger than 2 GB are not supported. This is a limit of WO itself, not of this adaptor: the stream
+				// classes a WORequest is built on (WONoCopyPushbackInputStream, WOInputStreamData) and the multipart parser all
+				// measure content in ints, and WO's own classic adaptor has the same ceiling. We fail clearly rather than silently
+				// truncate, and will look into it if the need ever arises.
 				if( length > Integer.MAX_VALUE ) {
 					throw new IllegalArgumentException( "Request content length %s exceeds the size of an int. Unfortunately, we currently can't handle that".formatted( length ) );
 				}
