@@ -10,7 +10,7 @@
 
 	<properties>
 		<maven.compiler.release>25</maven.compiler.release>
-		<jetty.version>12.1.12</jetty.version>
+		<jetty.version>12.1.13</jetty.version>
 		<webobjects.version>5.4.3</webobjects.version>
 	</properties>
 
