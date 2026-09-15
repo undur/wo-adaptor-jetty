@@ -4,7 +4,7 @@ A Jetty-based WOAdaptor. Based on Jetty's own servlet-free APIs making it's rela
 
 ## Usage
 
-Build/install and add as a dependency to your app. Then pass the launch argument `-WOAdaptor WOAdaptorJetty` to your application.
+Releases are deployed to the WOCommunity maven repository, so if your environment is set up for WO development just add the dependency to your `pom`, then pass the launch argument `-WOAdaptor WOAdaptorJetty` to your application. Requires JDK 25.
 
 ```xml
 <dependency>
@@ -57,6 +57,21 @@ Time per request:       1.106 [ms] (mean)
 Time per request:       0.069 [ms] (mean, across all concurrent requests)
 Transfer rate:          3388922.70 [Kbytes/sec] received
 ```
+
+## Changelog
+
+### 0.9.0 - 2026-09-15
+
+First release. In production use since November 2025; published as a pre-release ahead of 1.0 while the package name and configuration surface are finalised.
+
+* Two modules sharing one version: `wo-adaptor-jetty` (the adaptor) and `wo-adaptor-jetty-websocket` (experimental WebSocket support, enabled by its presence on the classpath through the `JettyHandlerDecorator` extension point)
+* Optional request backpressure via a Jetty `QoSHandler`: `JettyMaxConcurrentRequests`, `JettyMaxSuspendedRequests`, `JettyMaxSuspendSeconds`
+* Connector idle timeout (`JettyConnectorIdleTimeoutSeconds`, default 600) and accept queue size honoring WO's `WOListenQueueSize` (default 511)
+* Request bodies sent without a `Content-Length` are answered with `411 Length Required` instead of being silently treated as empty
+* Repeated same-name request headers are no longer dropped
+* Port discovery for `WOPort` 0 uses the first network connector and fails clearly if there is none
+* `WOAdaptorJetty.UNHANDLED_RESPONSE_KEY`: a documented contract for letting a request fall through to the next Jetty handler
+* `JettyServerProvider` lets an application build the Jetty server itself
 
 <!--
 ## WebSockets
