@@ -14,6 +14,8 @@ import java.util.Map.Entry;
 import java.util.ServiceLoader;
 
 import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.io.Content;
 import org.eclipse.jetty.server.ConnectionMetaData;
 import org.eclipse.jetty.server.Connector;
@@ -347,6 +349,17 @@ public class WOAdaptorJetty extends WOAdaptor {
 		}
 
 		private boolean doRequest( final Request jettyRequest, final Response jettyResponse, Callback callback ) throws IOException {
+
+			// WO needs to know a request body'"'"'s length up front (its stream classes are built around it), so a body sent with chunked
+			// transfer encoding and no Content-Length cannot be handed to it. WO'"'"'s own classic adaptor silently treats such a
+			// body as empty; we answer 411 Length Required instead, so the client learns why its data went nowhere. A plain
+			// body-less request also has an unknown length, which is why we key on the Transfer-Encoding header rather than on
+			// the length alone. (Spooling unknown-length bodies to learn their size would lift the limitation; see the issue.)
+			if( jettyRequest.getLength() < 0 && jettyRequest.getHeaders().contains( HttpHeader.TRANSFER_ENCODING ) ) {
+				logger.warn( "Rejecting {} {} with 411: request body has no Content-Length (chunked transfer encoding is not supported)", jettyRequest.getMethod(), jettyRequest.getHttpURI().getPath() );
+				Response.writeError( jettyRequest, jettyResponse, callback, HttpStatus.LENGTH_REQUIRED_411, "A request body must be sent with a Content-Length header; chunked transfer encoding is not supported" );
+				return true;
+			}
 
 			final WORequest woRequest = requestToWORequest( jettyRequest );
 
