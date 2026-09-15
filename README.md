@@ -10,7 +10,7 @@ Build/install and add as a dependency to your app. Then pass the launch argument
 <dependency>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.9.0</version>
 </dependency>
 ```
 
@@ -22,7 +22,7 @@ WebSocket support lives in a separate module. Adding it to your classpath is all
 <dependency>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty-websocket</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.9.0</version>
 </dependency>
 ```
 

@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty-reactor</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.9.0</version>
 	<packaging>pom</packaging>
 	<name>wo-adaptor-jetty reactor</name>
 
@@ -45,4 +45,17 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+	<distributionManagement>
+		<repository>
+			<id>wocommunity.deployment</id>
+			<name>WOCommunity Maven2 Releases Repository</name>
+			<url>https://maven.wocommunity.org/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>wocommunity.deployment</id>
+			<uniqueVersion>false</uniqueVersion>
+			<name>WOCommunity Maven2 Snapshots Repository</name>
+			<url>https://maven.wocommunity.org/content/repositories/snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
 </project>
