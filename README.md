@@ -55,7 +55,7 @@ Server push lives in a separate module, `wo-adaptor-jetty-push`, released togeth
 <dependency>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty-push</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>0.10.0</version>
 </dependency>
 ```
 
@@ -78,12 +78,13 @@ TICKER.broadcast( "tick", Instant.now().toString() );
 
 ## Changelog
 
-### 1.0.0-SNAPSHOT - unreleased
+### 0.10.0 - 2026-09-17
 
 * Server-sent events: `SSEStream` and `SSEHub` in the push module
 * Responses with a content stream of unknown length are streamed with chunked transfer encoding until the stream ends, instead of being sent with a `Content-Length` of 0
 * `JettyQoSExcludedPaths`: path specs that bypass the QoS concurrency limit, for long-lived responses
 * The websocket module is renamed `wo-adaptor-jetty-push`, since it now holds server push in general
+* SSE responses send `Cache-Control: no-store`; the Firefox request-coalescing gotcha for repeated stream URLs is documented in `SSEStream`
 
 ### 0.9.0 - 2026-09-15
 
