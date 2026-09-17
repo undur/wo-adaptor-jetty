@@ -38,6 +38,11 @@ import com.webobjects.appserver.WOResponse;
  * Requires an adaptor that streams unknown-length responses (wo-adaptor-jetty does). WO's classic adaptor would send the
  * response with a Content-Length of 0 and the events would never leave the server. Note also that a long-lived response
  * holds a QoS permit for its lifetime if JettyMaxConcurrentRequests is set; exclude event paths with JettyQoSExcludedPaths.
+ *
+ * Client note: Firefox coalesces concurrent GETs to an identical URL - it dispatches the first and holds the rest until
+ * it completes, which for an open-ended stream is never. A page that may open the same stream more than once (a second
+ * tab, say) must therefore make each connection's URL unique, e.g. a nonce query parameter. This is a client-side
+ * concern - Cache-Control on the response does not prevent the coalescing - so it cannot be fixed here.
  */
 public final class SSEStream implements Closeable {
 
@@ -68,7 +73,9 @@ public final class SSEStream implements Closeable {
 		final WOResponse response = new WOResponse();
 		response.setStatus( 200 );
 		response.setHeader( CONTENT_TYPE, "content-type" );
-		response.setHeader( "no-cache", "cache-control" );
+		// no-store, not the no-cache the SSE spec suggests: Firefox serialises concurrent GETs to an identical URL while a cache
+		// entry may be written, so with no-cache a second tab's stream waits for the first tab's to end - which it never does.
+		response.setHeader( "no-store", "cache-control" );
 		response.setHeader( "no", "x-accel-buffering" ); // Tells nginx-style front ends not to buffer the response
 		response.setContentStream( _inputStream, 4096, 0 ); // Length 0 = unknown: the adaptor streams until EOF
 		return response;
