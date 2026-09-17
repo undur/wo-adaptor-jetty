@@ -14,19 +14,34 @@ Releases are deployed to the WOCommunity maven repository, so if your environmen
 </dependency>
 ```
 
-### WebSockets (experimental)
+### Server push: server-sent events and WebSockets
 
-WebSocket support lives in a separate module. Adding it to your classpath is all it takes: the adaptor discovers it automatically and enables WebSocket upgrades in its default server, with nothing to configure. The two modules are released together and must be used at the same version.
+Server push lives in a separate module, `wo-adaptor-jetty-push`. The two modules are released together and must be used at the same version.
 
 ```xml
 <dependency>
 	<groupId>is.rebbi</groupId>
-	<artifactId>wo-adaptor-jetty-websocket</artifactId>
+	<artifactId>wo-adaptor-jetty-push</artifactId>
 	<version>0.9.0</version>
 </dependency>
 ```
 
-Register endpoints from your `Application` class with `WOWebSocketRegistry.register( "/ws/chat", ChatHandler.class )`. If you build your own Jetty server through `JettyServerProvider`, wrap your handler with `WOJettyWebSocketSupport.createWebSocketHandler( server, handler )` yourself, since the automatic discovery only applies to the default server.
+**Server-sent events** need nothing beyond the module: return an `SSEStream`'s response from any action and keep sending to it.
+
+```java
+private static final SSEHub TICKER = new SSEHub();
+
+public WOActionResults eventsAction() {
+	return TICKER.open().response();          // WO returns at once; the response stays open
+}
+
+// later, from anywhere:
+TICKER.broadcast( "tick", Instant.now().toString() );
+```
+
+`SSEStream` queues events (`send` never blocks), writes a keep-alive comment every 30 seconds while quiet, and closes itself when the client goes away, at which point `onClose` listeners run and an `SSEHub` drops it. The adaptor streams the response with chunked transfer encoding, so this works only with wo-adaptor-jetty, not WO's classic adaptor. If you use `JettyMaxConcurrentRequests`, exclude your event paths with `JettyQoSExcludedPaths` (comma-separated Jetty path specs such as `/sse/*`), since an open response holds its permit for as long as it lives.
+
+**WebSockets (experimental)** are enabled by the module's presence on the classpath: the adaptor discovers it and adds WebSocket upgrades to its default server. Register endpoints from your `Application` class with `WOWebSocketRegistry.register( "/ws/chat", ChatHandler.class )`. If you build your own Jetty server through `JettyServerProvider`, wrap your handler with `WOJettyWebSocketSupport.createWebSocketHandler( server, handler )` yourself, since the automatic discovery only applies to the default server.
 
 ## Why?
 
@@ -64,7 +79,7 @@ Transfer rate:          3388922.70 [Kbytes/sec] received
 
 First release. In production use since November 2025; published as a pre-release ahead of 1.0 while the package name and configuration surface are finalised.
 
-* Two modules sharing one version: `wo-adaptor-jetty` (the adaptor) and `wo-adaptor-jetty-websocket` (experimental WebSocket support, enabled by its presence on the classpath through the `JettyHandlerDecorator` extension point)
+* Two modules sharing one version: `wo-adaptor-jetty` (the adaptor) and `wo-adaptor-jetty-push` (experimental WebSocket support, enabled by its presence on the classpath through the `JettyHandlerDecorator` extension point)
 * Optional request backpressure via a Jetty `QoSHandler`: `JettyMaxConcurrentRequests`, `JettyMaxSuspendedRequests`, `JettyMaxSuspendSeconds`
 * Connector idle timeout (`JettyConnectorIdleTimeoutSeconds`, default 600) and accept queue size honoring WO's `WOListenQueueSize` (default 511)
 * Request bodies sent without a `Content-Length` are answered with `411 Length Required` instead of being silently treated as empty
