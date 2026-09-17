@@ -16,6 +16,7 @@ import java.util.ServiceLoader;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpStatus;
+import org.eclipse.jetty.http.pathmap.PathSpec;
 import org.eclipse.jetty.io.Content;
 import org.eclipse.jetty.server.ConnectionMetaData;
 import org.eclipse.jetty.server.Connector;
@@ -285,6 +286,14 @@ public class WOAdaptorJetty extends WOAdaptor {
 	private static final int MAX_CONCURRENT_REQUESTS = NSProperties.integerForKey( "JettyMaxConcurrentRequests" );
 
 	/**
+	 * Property: comma-separated Jetty path specs (e.g. "/sse/*,/events/*") for requests that bypass the QoS limit
+	 * entirely. Long-lived responses - server-sent events, anything streaming for the lifetime of a client - hold their
+	 * permit until they complete, so a handful of them would exhaust a small limit and starve ordinary requests. Excluded
+	 * requests go straight through to WO, uncounted. Only meaningful when JettyMaxConcurrentRequests is set.
+	 */
+	private static final String QOS_EXCLUDED_PATHS = NSProperties.stringForKey( "JettyQoSExcludedPaths" );
+
+	/**
 	 * Property: maximum number of requests allowed to wait in the QoS queue once the concurrency limit is reached. Beyond
 	 * this, excess requests are rejected (503) rather than queued, bounding memory under overload. 0 (default) = unlimited.
 	 */
@@ -310,6 +319,14 @@ public class WOAdaptorJetty extends WOAdaptor {
 		final QoSHandler qos = new QoSHandler( handler );
 		qos.setMaxRequestCount( MAX_CONCURRENT_REQUESTS );
 
+		if( QOS_EXCLUDED_PATHS != null && !QOS_EXCLUDED_PATHS.isBlank() ) {
+			for( final String spec : QOS_EXCLUDED_PATHS.split( "," ) ) {
+				if( !spec.isBlank() ) {
+					qos.exclude( PathSpec.from( spec.strip() ) );
+				}
+			}
+		}
+
 		if( MAX_SUSPENDED_REQUESTS > 0 ) {
 			qos.setMaxSuspendedRequestCount( MAX_SUSPENDED_REQUESTS );
 		}
@@ -318,7 +335,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 			qos.setMaxSuspend( java.time.Duration.ofSeconds( MAX_SUSPEND_SECONDS ) );
 		}
 
-		logger.info( "QoS backpressure enabled: maxConcurrentRequests={}, maxSuspendedRequests={}, maxSuspendSeconds={}", MAX_CONCURRENT_REQUESTS, MAX_SUSPENDED_REQUESTS, MAX_SUSPEND_SECONDS );
+		logger.info( "QoS backpressure enabled: maxConcurrentRequests={}, maxSuspendedRequests={}, maxSuspendSeconds={}, excludedPaths={}", MAX_CONCURRENT_REQUESTS, MAX_SUSPENDED_REQUESTS, MAX_SUSPEND_SECONDS, QOS_EXCLUDED_PATHS );
 
 		return qos;
 	}
@@ -326,7 +343,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 	/**
 	 * Apply every JettyHandlerDecorator found on the classpath (via ServiceLoader) around the given handler. Decorators form
 	 * the outermost layer of the chain, so they see each request before the QoS handler and WO do. This is how optional
-	 * modules plug themselves in: wo-adaptor-jetty-websocket, for instance, contributes the WebSocket upgrade handler this
+	 * modules plug themselves in: wo-adaptor-jetty-push, for instance, contributes the WebSocket upgrade handler this
 	 * way, so merely having it on the classpath enables WebSockets - there is no flag to flip.
 	 */
 	private static Handler applyHandlerDecorators( final Server server, Handler handler ) {
@@ -394,13 +411,16 @@ public class WOAdaptorJetty extends WOAdaptor {
 			}
 
 			if( woResponse.contentInputStream() != null ) {
-				final long contentLength = woResponse.contentInputStreamLength(); // If an InputStream is present, the stream's length must be present as well
+				final long contentLength = woResponse.contentInputStreamLength();
 
-				if( contentLength == -1 ) {
-					throw new IllegalArgumentException( "WOResponse.contentInputStream() is set but contentInputLength has not been set. You must provide the content length when serving an InputStream" );
+				// A positive length is sent as Content-Length. Anything else means the length is unknown (WOResponse clamps
+				// negative lengths to 0, so 0 is the only way an app can say so): we then send no Content-Length and Jetty uses
+				// chunked transfer encoding, streaming until the InputStream reports EOF. That is what makes server-sent events
+				// and other open-ended responses possible - the request completes when the stream does. Each read from the
+				// stream is written out as it arrives, so a stream that hands over data in small pieces is delivered live.
+				if( contentLength > 0 ) {
+					jettyResponse.getHeaders().put( "content-length", String.valueOf( contentLength ) );
 				}
-
-				jettyResponse.getHeaders().put( "content-length", String.valueOf( contentLength ) );
 
 				// Content.Source.from() handles buffering internally via ByteBufferPool
 				// No need to wrap in BufferedInputStream (would cause double-buffering)
