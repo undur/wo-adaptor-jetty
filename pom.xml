@@ -14,10 +14,10 @@
 		<webobjects.version>5.4.3</webobjects.version>
 	</properties>
 
-	<!-- The modules share this reactor's version: a given version of wo-adaptor-jetty-websocket is built and tested against the same version of wo-adaptor-jetty -->
+	<!-- The modules share this reactor's version: a given version of wo-adaptor-jetty-push is built and tested against the same version of wo-adaptor-jetty -->
 	<modules>
 		<module>wo-adaptor-jetty</module>
-		<module>wo-adaptor-jetty-websocket</module>
+		<module>wo-adaptor-jetty-push</module>
 	</modules>
 
 	<dependencyManagement>

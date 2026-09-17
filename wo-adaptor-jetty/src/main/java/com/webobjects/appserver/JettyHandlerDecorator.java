@@ -8,7 +8,7 @@ import org.eclipse.jetty.server.Server;
  *
  * Implementations are discovered with java.util.ServiceLoader: list the implementing class in
  * META-INF/services/com.webobjects.appserver.JettyHandlerDecorator and it is picked up automatically, so having a jar
- * that provides a decorator on the classpath is all it takes to enable it (wo-adaptor-jetty-websocket works this way).
+ * that provides a decorator on the classpath is all it takes to enable it (wo-adaptor-jetty-push works this way).
  *
  * Decorators are applied as the OUTERMOST layers of the handler chain, after the WO request handler and any QoS
  * backpressure handler have been assembled. A decorator therefore sees every request first and may intercept some

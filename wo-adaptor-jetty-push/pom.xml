@@ -2,9 +2,9 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<artifactId>wo-adaptor-jetty-websocket</artifactId>
-	<name>wo-adaptor-jetty-websocket</name>
-	<description>Experimental WebSocket support for wo-adaptor-jetty. Adding this module to the classpath enables WebSocket upgrades in the adaptor's default server</description>
+	<artifactId>wo-adaptor-jetty-push</artifactId>
+	<name>wo-adaptor-jetty-push</name>
+	<description>Server push for wo-adaptor-jetty: server-sent events, and experimental WebSocket support (adding this module to the classpath enables WebSocket upgrades in the adaptor's default server)</description>
 
 	<parent>
 		<groupId>is.rebbi</groupId>
