@@ -28,8 +28,10 @@ import com.webobjects.appserver.WOResponse;
  *
  * The response carries no length, so the adaptor streams it with chunked transfer encoding until the stream is closed,
  * writing each event as it is sent. Events are queued, so {@link #send} never blocks and may be called from any thread.
- * While nothing is sent, a comment line is written at {@code keepAliveInterval} (default 30 seconds) so that proxies and
- * the connector's idle timeout don't take the quiet connection for a dead one; keep the interval below both.
+ * While nothing is sent, a comment line is written at {@code keepAliveInterval} (default 10 seconds) so that proxies and
+ * the connector's idle timeout don't take the quiet connection for a dead one; keep the interval below every timeout
+ * between the stream and its client. A stream also writes a comment as soon as it is created, so the response is
+ * committed and its headers reach the client at once rather than at the first event.
  *
  * The stream ends when {@link #close} is called, or when the client goes away - the adaptor then closes the underlying
  * InputStream, which is how {@link #isOpen} turns false and {@link #onClose} listeners run. Sending to a closed stream is
@@ -48,8 +50,16 @@ public final class SSEStream implements Closeable {
 
 	public static final String CONTENT_TYPE = "text/event-stream";
 
-	private static final Duration DEFAULT_KEEP_ALIVE_INTERVAL = Duration.ofSeconds( 30 );
+	/**
+	 * How often a comment line goes out while nothing else does. Deliberately well under the timeouts that sit between a
+	 * stream and its client: a WebObjects instance's adaptor configuration carries a recvTimeout that JavaMonitor defaults
+	 * to 30 seconds, and modulo applies it as the idle timeout of its connection to the instance. A keep-alive interval
+	 * equal to that timeout is a race the timeout can win, and the client answers an aborted stream by reconnecting - over
+	 * and over, on a quiet feed. Ten seconds leaves room for all of it.
+	 */
+	private static final Duration DEFAULT_KEEP_ALIVE_INTERVAL = Duration.ofSeconds( 10 );
 	private static final byte[] KEEP_ALIVE = ": keep-alive\n\n".getBytes( StandardCharsets.UTF_8 );
+	private static final byte[] OPENING_COMMENT = ": open\n\n".getBytes( StandardCharsets.UTF_8 );
 	private static final byte[] END = new byte[0];
 
 	private final BlockingQueue<byte[]> _queue = new LinkedBlockingQueue<>();
@@ -64,6 +74,13 @@ public final class SSEStream implements Closeable {
 
 	public SSEStream( final Duration keepAliveInterval ) {
 		_keepAliveMillis = keepAliveInterval.toMillis();
+
+		// Commit the response at once. Until the first byte is written the adaptor has sent no headers, so the client sits
+		// in "connecting" and every proxy in between sees dead air on a connection it may be timing out. On a quiet feed
+		// the first byte would otherwise be the first keep-alive, up to a whole interval later - long enough for an
+		// upstream idle timeout to abort the connection first, which the client answers by reconnecting, forever. An
+		// opening comment costs a few bytes and removes the whole class of problem.
+		_queue.add( OPENING_COMMENT );
 	}
 
 	/**
