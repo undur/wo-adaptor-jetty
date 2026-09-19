@@ -4,7 +4,7 @@ A Jetty-based WOAdaptor. Based on Jetty's own servlet-free APIs making it's rela
 
 ## Usage
 
-Releases are deployed to the WOCommunity maven repository, so if your environment is set up for WO development just add the dependency to your `pom`, then pass the launch argument `-WOAdaptor WOAdaptorJetty` to your application. Requires JDK 25.
+Releases are deployed to the WOCommunity maven repository, so if your environment is set up for WO development just add the dependency to your `pom`. The adaptor selects itself at startup, so no launch argument is needed; pass `-WOAdaptor` explicitly only when you want some other adaptor. Requires JDK 25.
 
 ```xml
 <dependency>
@@ -77,6 +77,10 @@ TICKER.broadcast( "tick", Instant.now().toString() );
 **WebSockets** are enabled by the module's presence on the classpath: the adaptor discovers it and adds WebSocket upgrades to its default server. Register endpoints from your `Application` class with `WOWebSocketRegistry.register( "/ws/chat", ChatHandler.class )`. If you build your own Jetty server through `JettyServerProvider`, wrap your handler with `WOJettyWebSocketSupport.createWebSocketHandler( server, handler )` yourself, since the automatic discovery only applies to the default server.
 
 ## Changelog
+
+### 0.12.0 - 2026-09-19
+
+* The adaptor selects itself. The core module is now a WO framework whose principal class names the Jetty adaptor at bundle-loading time, so an application that depends on it no longer has to pass `-WOAdaptor WOAdaptorJetty`. An explicit `-WOAdaptor`, or the property set in a properties file, still wins
 
 ### 0.11.0 - 2026-09-19
 
