@@ -9,7 +9,7 @@
 	<parent>
 		<groupId>is.rebbi</groupId>
 		<artifactId>wo-adaptor-jetty-reactor</artifactId>
-		<version>0.11.0-SNAPSHOT</version>
+		<version>0.11.0</version>
 	</parent>
 
 	<dependencies>

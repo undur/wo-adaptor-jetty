@@ -78,6 +78,11 @@ TICKER.broadcast( "tick", Instant.now().toString() );
 
 ## Changelog
 
+### 0.11.0 - 2026-09-19
+
+* `SSEStream` writes an opening comment as soon as it is created, so the response is committed and its headers reach the client at once. Previously nothing was written until the first event or the first keep-alive, leaving the browser in "connecting" and every proxy in between looking at an idle connection it might time out
+* The default keep-alive interval is 10 seconds, down from 30. A WebObjects instance's adaptor configuration carries a `recvTimeout` that JavaMonitor defaults to 30 seconds and that modulo applies as the idle timeout of its connection to the instance; an interval equal to that timeout is a race the timeout can win, and a client answers an aborted stream by reconnecting, over and over, on a quiet feed
+
 ### 0.10.0 - 2026-09-17
 
 * Server-sent events: `SSEStream` and `SSEHub` in the push module
