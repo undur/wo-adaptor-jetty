@@ -10,7 +10,7 @@ Releases are deployed to the WOCommunity maven repository, so if your environmen
 <dependency>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty</artifactId>
-	<version>0.9.0</version>
+	<version>0.12.1</version>
 </dependency>
 ```
 ## Why?
@@ -55,7 +55,7 @@ Server push lives in a separate module, `wo-adaptor-jetty-push`, released togeth
 <dependency>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty-push</artifactId>
-	<version>0.10.0</version>
+	<version>0.12.1</version>
 </dependency>
 ```
 
@@ -77,6 +77,10 @@ TICKER.broadcast( "tick", Instant.now().toString() );
 **WebSockets** are enabled by the module's presence on the classpath: the adaptor discovers it and adds WebSocket upgrades to its default server. Register endpoints from your `Application` class with `WOWebSocketRegistry.register( "/ws/chat", ChatHandler.class )`. If you build your own Jetty server through `JettyServerProvider`, wrap your handler with `WOJettyWebSocketSupport.createWebSocketHandler( server, handler )` yourself, since the automatic discovery only applies to the default server.
 
 ## Changelog
+
+### 0.12.1 - 2026-09-23
+
+* Request paths may contain characters such as `|`, which Jetty's default URI compliance rejects with `400 Illegal Path Character` before the request reaches WebObjects. The classic adaptor passes such paths through, and URLs in the wild carry them. Suspicious characters (`\`, NUL, control characters), encoded slashes and path traversal are still rejected
 
 ### 0.12.0 - 2026-09-19
 
