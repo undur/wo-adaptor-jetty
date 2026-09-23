@@ -21,6 +21,7 @@ import org.eclipse.jetty.io.Content;
 import org.eclipse.jetty.server.ConnectionMetaData;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.NetworkConnector;
@@ -212,6 +213,11 @@ public class WOAdaptorJetty extends WOAdaptor {
 		Server server = new Server( threadPool );
 
 		final HttpConfiguration config = new HttpConfiguration();
+
+		// Jetty's default URI compliance refuses characters such as '|' in a request path with "400 Illegal Path
+		// Character". WebObjects applications have always accepted them (the classic adaptor passes the path through
+		// as-is), and URLs in the wild carry them, so they are allowed here.
+		config.setUriCompliance( UriCompliance.DEFAULT.with( "WebObjects", UriCompliance.Violation.ILLEGAL_PATH_CHARACTERS ) );
 		config.setSendServerVersion( false ); // Not sending the server software/version is good practice for security
 
 		final HttpConnectionFactory connectionFactory = new HttpConnectionFactory( config );
