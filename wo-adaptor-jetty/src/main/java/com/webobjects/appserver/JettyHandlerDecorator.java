@@ -19,7 +19,10 @@ public interface JettyHandlerDecorator {
 
 	/**
 	 * @param server The Jetty server being assembled (not yet started)
-	 * @param inner The handler to wrap. The returned handler must delegate to it for every request it does not handle itself
+	 * @param inner The handler to wrap. The returned handler must delegate to it for every request it does not handle itself,
+	 *        and must adopt it as a child (for a Handler.Wrapper, setHandler( inner )) so that it is started and stopped with
+	 *        the server. A handler that is only called, never started, can fail every request: a QoSHandler assigns its
+	 *        state in doStart()
 	 * @return The handler that replaces {@code inner} in the chain
 	 */
 	Handler decorate( Server server, Handler inner );

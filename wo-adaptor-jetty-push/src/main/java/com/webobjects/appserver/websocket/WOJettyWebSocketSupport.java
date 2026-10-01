@@ -43,6 +43,11 @@ public class WOJettyWebSocketSupport implements JettyHandlerDecorator {
 	/**
 	 * Creates a handler that supports both HTTP and WebSocket requests.
 	 * WebSocket upgrade requests are intercepted by the WebSocket infrastructure, other requests go through to the WO handler.
+	 *
+	 * The handler given is adopted as the returned handler's child, not merely called from it: only then is it part of the
+	 * server's component tree, started and stopped with the server. A handler that is called but never started is broken in
+	 * ways that depend on what it is - a QoSHandler, for one, assigns its state in doStart() and fails every request without
+	 * it.
 	 */
 	public static Handler createWebSocketHandler( final Server server, final Handler otherHandler ) {
 
@@ -53,7 +58,7 @@ public class WOJettyWebSocketSupport implements JettyHandlerDecorator {
 		logger.info( "WebSocket idle timeout set to {} seconds (0 = infinite)", WEBSOCKET_IDLE_TIMEOUT_SECONDS );
 
 		// Create an upgrade handler that intercepts WebSocket upgrade requests
-		return new WebSocketUpgradeHandler( container ) {
+		final WebSocketUpgradeHandler upgradeHandler = new WebSocketUpgradeHandler( container ) {
 
 			@Override
 			public boolean handle( Request request, Response response, Callback callback ) throws Exception {
@@ -87,9 +92,12 @@ public class WOJettyWebSocketSupport implements JettyHandlerDecorator {
 				}
 
 				// Not a WebSocket upgrade, handle like any other HTTP request
-				return otherHandler.handle( request, response, callback );
+				return getHandler().handle( request, response, callback );
 			}
 		};
+
+		upgradeHandler.setHandler( otherHandler );
+		return upgradeHandler;
 	}
 
 	private static boolean isWebSocketUpgrade( Request request ) {

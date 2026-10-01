@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **The WebSocket upgrade handler starts the chain it wraps**
+  With the push module on the classpath and `JettyMaxConcurrentRequests` set, every request failed with a
+  500: the upgrade handler called the rest of the chain without adopting it as a child, so the QoS handler
+  inside it was never started. Without a concurrency limit the WebObjects handler ran unstarted, which
+  happened to work. The wrapped chain is now the upgrade handler's child, and the `JettyHandlerDecorator`
+  contract says a decorator must adopt the handler it wraps. (#10)
+
 - **Each response header value is sent as a field of its own**
   Values of a header an application appended more than once were joined into one comma-separated field,
   which is only correct for headers whose syntax is a list. `WWW-Authenticate` and `Proxy-Authenticate`

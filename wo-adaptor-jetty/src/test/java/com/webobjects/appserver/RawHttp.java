@@ -77,10 +77,18 @@ public class RawHttp {
 	 * Open a request and leave it open, for responses that don't end by themselves (event streams)
 	 */
 	public OpenResponse open( final String target ) {
+		return openRaw( "GET " + target + " HTTP/1.1\r\nHost: localhost\r\n\r\n" );
+	}
+
+	/**
+	 * Send a raw request and leave the connection open, for responses read as they arrive or connections that change
+	 * protocol (a WebSocket upgrade)
+	 */
+	public OpenResponse openRaw( final String rawRequest ) {
 		try {
 			final Socket socket = new Socket( "localhost", _port );
 			socket.setSoTimeout( TIMEOUT_MILLIS );
-			socket.getOutputStream().write( ("GET " + target + " HTTP/1.1\r\nHost: localhost\r\n\r\n").getBytes( StandardCharsets.ISO_8859_1 ) );
+			socket.getOutputStream().write( rawRequest.getBytes( StandardCharsets.ISO_8859_1 ) );
 			socket.getOutputStream().flush();
 			return new OpenResponse( socket );
 		}
