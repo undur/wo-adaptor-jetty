@@ -12,6 +12,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.webobjects.foundation.NSData;
+import com.webobjects.foundation.NSRange;
+
 /**
  * How a WOResponse is written to the wire
  */
@@ -66,6 +69,50 @@ public class ResponseTest {
 		assertEquals( "11", response.header( "content-length" ) );
 		assertFalse( response.chunked() );
 		assertEquals( "hello there", response.bodyString() );
+	}
+
+	/**
+	 * Content is written straight from the NSData's backing array, so it must honour the range the data occupies in it
+	 */
+	@Test
+	public void contentThatIsPartOfALargerArrayIsSentExactly() {
+		final byte[] backing = "xxxxxinside the rangexxxxx".getBytes( StandardCharsets.UTF_8 );
+
+		TestApplication.respondWith( request -> {
+			final WOResponse response = new WOResponse();
+			response.setContent( new NSData( backing, new NSRange( 5, 16 ), true ) );
+			return response;
+		} );
+
+		final RawHttp.Response response = server.http().get( "/" );
+		assertEquals( "16", response.header( "content-length" ) );
+		assertEquals( "inside the range", response.bodyString() );
+	}
+
+	/**
+	 * Large content built up by appending goes out whole and exact
+	 */
+	@Test
+	public void largeAppendedContentIsSentExactly() {
+		final StringBuilder expected = new StringBuilder();
+
+		for( int i = 0; i < 50_000; i++ ) {
+			expected.append( i ).append( '\n' );
+		}
+
+		TestApplication.respondWith( request -> {
+			final WOResponse response = new WOResponse();
+
+			for( int i = 0; i < 50_000; i++ ) {
+				response.appendContentString( i + "\n" );
+			}
+
+			return response;
+		} );
+
+		final RawHttp.Response response = server.http().get( "/" );
+		assertEquals( String.valueOf( expected.length() ), response.header( "content-length" ) );
+		assertEquals( expected.toString(), response.bodyString() );
 	}
 
 	@Test

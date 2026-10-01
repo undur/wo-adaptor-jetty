@@ -2,10 +2,10 @@ package com.webobjects.appserver;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,12 +42,14 @@ import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSData;
 import com.webobjects.foundation.NSDictionary;
 import com.webobjects.foundation.NSForwardException;
+import com.webobjects.foundation.NSMutableRange;
 import com.webobjects.foundation.NSProperties;
 
 /**
  * A WOAdaptor based on Jetty.
  *
- * To use, set the property -WOAdaptor WOJettyAdaptor
+ * Having the framework on the classpath is enough: its principal class selects this adaptor, unless the WOAdaptor
+ * property names another one.
  */
 
 public class WOAdaptorJetty extends WOAdaptor {
@@ -58,6 +60,10 @@ public class WOAdaptorJetty extends WOAdaptor {
 	 * userInfo key marking a WOResponse as "unhandled": WO had no answer for the request (typically a route miss) and the
 	 * request should fall through to the next handler in the Jetty chain - for instance an ng-objects handler serving
 	 * alongside WO in the same server.
+	 *
+	 * The request has been dispatched by then, so mark a response this way only for a request WO hasn't acted on, such as
+	 * a route miss on a GET. Whatever WO did on the way is not undone: a request body it read is gone, so the next handler
+	 * sees an empty one, and a session it checked out, or cookies it set on the discarded response, stay done.
 	 */
 	public static final String UNHANDLED_RESPONSE_KEY = "wo-unhandled-response";
 
@@ -105,6 +111,9 @@ public class WOAdaptorJetty extends WOAdaptor {
 
 	/**
 	 * Briefly try binding to the requested port. If unsuccessful, emulate WO's behaviour (wrap the BindException in NSForwardException) to help ERXApplication catch it and stop any apps occupying the port
+	 *
+	 * This is a check, not a reservation: the server binds in registerForEvents(), and a process taking the port in between
+	 * makes startup fail there instead, where no such recovery is possible.
 	 */
 	private static void checkPortAvailable( final int port ) {
 
@@ -124,6 +133,12 @@ public class WOAdaptorJetty extends WOAdaptor {
 
 	@Override
 	public void unregisterForEvents() {
+
+		// Startup failed before the server was created
+		if( _server == null ) {
+			return;
+		}
+
 		logger.info( "Stopping %s".formatted( getClass().getSimpleName() ) );
 
 		try {
@@ -155,7 +170,8 @@ public class WOAdaptorJetty extends WOAdaptor {
 			// WOApplication.application()._setHost( InetAddress.getLocalHost().getHostName() );
 		}
 		catch( final Exception e ) {
-			e.printStackTrace();
+			// An application whose adaptor isn't listening can't be reached, so it doesn't keep running
+			logger.error( "%s failed to start %s, exiting".formatted( getClass().getSimpleName(), _port == 0 ? "on a random port" : "on port " + _port ), e );
 			System.exit( -1 );
 		}
 	}
@@ -432,11 +448,10 @@ public class WOAdaptorJetty extends WOAdaptor {
 
 				jettyResponse.getHeaders().put( "content-length", String.valueOf( responseContent.length() ) );
 
-				try( final OutputStream out = Response.asBufferedOutputStream( jettyRequest, jettyResponse )) {
-					responseContent.writeToStream( out );
-				}
-
-				callback.succeeded();
+				// Written from the content's own bytes, without a copy, completing the callback once they are out
+				final NSMutableRange range = new NSMutableRange();
+				final byte[] bytes = responseContent.bytesNoCopy( range );
+				jettyResponse.write( true, ByteBuffer.wrap( bytes, range.location(), range.length() ), callback );
 			}
 
 			return true;

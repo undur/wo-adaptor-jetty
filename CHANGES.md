@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Smaller fixes from review**
+  Stopping an adaptor whose startup failed before its server was created no longer throws. A failure to
+  start the server is logged before the application exits, instead of printed to stderr. Response content
+  is written from its own bytes without a copy. The `UNHANDLED_RESPONSE_KEY` documentation states what
+  falling through does not undo, and the class documentation no longer says a `-WOAdaptor` argument is
+  needed. (#14)
+
 - **WebSocket fixes**
   In the experimental WebSocket support: a binary message no longer stops the session, which previously
   received nothing further, not even the peer's CLOSE. A handler's `onBinaryMessage` gets a copy of the
