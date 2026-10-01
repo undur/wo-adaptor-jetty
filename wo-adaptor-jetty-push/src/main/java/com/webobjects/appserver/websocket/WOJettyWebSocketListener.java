@@ -11,9 +11,13 @@ import com.webobjects.appserver.WORequest;
 
 /**
  * Jetty WebSocket listener that delegates to a WOWebSocketHandler.
+ *
+ * Auto-demanding, so Jetty reads the next frame once a callback has returned. With manual demand, every path through every
+ * callback must demand, and one that doesn't - as the binary path once didn't - stops the session, including the peer's
+ * CLOSE.
  */
 
-public class WOJettyWebSocketListener implements Session.Listener {
+public class WOJettyWebSocketListener implements Session.Listener.AutoDemanding {
 
 	private static final Logger logger = LoggerFactory.getLogger( WOJettyWebSocketListener.class );
 
@@ -37,9 +41,6 @@ public class WOJettyWebSocketListener implements Session.Listener {
 			logger.error( "Error in WebSocket onConnect handler", e );
 			_handler.onError( _woWebSocketSession, e );
 		}
-
-		// Start demanding messages
-		session.demand();
 	}
 
 	@Override
@@ -51,33 +52,38 @@ public class WOJettyWebSocketListener implements Session.Listener {
 			logger.error( "Error in WebSocket onTextMessage handler", e );
 			_handler.onError( _woWebSocketSession, e );
 		}
-
-		// Demand more data for the next message
-		if( _woWebSocketSession != null && _woWebSocketSession.isOpen() ) {
-			_woWebSocketSession.jettySession().demand();
-		}
 	}
 
+	/**
+	 * The payload buffer belongs to Jetty, which recycles it once the callback completes, so the handler gets a copy it may
+	 * keep, hand to an asynchronous send or read from another thread.
+	 */
 	@Override
 	public void onWebSocketBinary( ByteBuffer payload, Callback callback ) {
+		final ByteBuffer copy = ByteBuffer.allocate( payload.remaining() ).put( payload ).flip();
+		callback.succeed();
+
 		try {
-			_handler.onBinaryMessage( _woWebSocketSession, payload );
-			callback.succeed();
+			_handler.onBinaryMessage( _woWebSocketSession, copy );
 		}
 		catch( Exception e ) {
 			logger.error( "Error in WebSocket onBinaryMessage handler", e );
 			_handler.onError( _woWebSocketSession, e );
-			callback.fail( e );
 		}
 	}
 
 	@Override
-	public void onWebSocketClose( int statusCode, String reason ) {
+	public void onWebSocketClose( int statusCode, String reason, Callback callback ) {
 		try {
 			_handler.onClose( _woWebSocketSession, statusCode, reason );
 		}
 		catch( Exception e ) {
 			logger.error( "Error in WebSocket onClose handler", e );
+		}
+		finally {
+			// A no-op if the handler never started one, or stopped it itself
+			_handler.stopHeartbeat( _woWebSocketSession );
+			callback.succeed();
 		}
 	}
 

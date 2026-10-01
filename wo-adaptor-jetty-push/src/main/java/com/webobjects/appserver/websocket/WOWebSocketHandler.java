@@ -21,7 +21,7 @@ import com.webobjects.appserver.WORequest;
  * <pre>
  * public class ChatHandler extends WOWebSocketHandler {
  *     {@literal @}Override
- *     public void onConnect(WOWebSocketSession session) {
+ *     public void onConnect(WOWebSocketSession session, WORequest request) {
  *         logger.info("Client connected: {}", session.getRemoteAddress());
  *     }
  *
@@ -170,7 +170,7 @@ public abstract class WOWebSocketHandler {
 
 	/**
 	 * Stop the heartbeat for a session.
-	 * Automatically invoked when the connection closes (but can be called manually if required)
+	 * Invoked by the adaptor after onClose(), so a handler needn't, but can be called at any time
 	 */
 	protected void stopHeartbeat( WOWebSocketSession session ) {
 		final ScheduledFuture<?> future = (ScheduledFuture<?>)session.getAttribute( HEARTBEAT_FUTURE_KEY );

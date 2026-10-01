@@ -202,12 +202,12 @@ public void onTextMessage(WOWebSocketSession session, String message) {
 
 @Override
 public void onClose(WOWebSocketSession session, int statusCode, String reason) {
-    stopHeartbeat(session); // Cleanup (done automatically, but good practice)
+    stopHeartbeat(session); // Optional: the adaptor stops it after onClose()
 }
 ```
 
 **Configuration:**
-- Default WebSocket idle timeout: **0 seconds (infinite)**
+- Default WebSocket idle timeout: **Jetty's default, 30 seconds**; `0` means none
 - Set via property: `-DJettyWebSocketIdleTimeout=300` (5 minutes)
 - Heartbeat interval should be less than idle timeout
 

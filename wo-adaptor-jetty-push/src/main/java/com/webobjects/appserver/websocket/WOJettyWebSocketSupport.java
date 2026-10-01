@@ -15,11 +15,11 @@ import org.eclipse.jetty.websocket.server.WebSocketUpgradeHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.webobjects.appserver.JettyAdaptorProperties;
 import com.webobjects.appserver.JettyHandlerDecorator;
 import com.webobjects.appserver.WOAdaptorJetty;
 import com.webobjects.appserver.WOApplication;
 import com.webobjects.appserver.WORequest;
-import com.webobjects.foundation.NSProperties;
 
 public class WOJettyWebSocketSupport implements JettyHandlerDecorator {
 
@@ -36,9 +36,10 @@ public class WOJettyWebSocketSupport implements JettyHandlerDecorator {
 	private static final Logger logger = LoggerFactory.getLogger( WOJettyWebSocketSupport.class );
 
 	/**
-	 * WebSocket idle timeout in seconds Set to 0 for no timeout.
+	 * WebSocket idle timeout in seconds, 0 for none. Unset (-1) leaves Jetty's default, so a client that vanishes without a
+	 * CLOSE is eventually reaped.
 	 */
-	private static final int WEBSOCKET_IDLE_TIMEOUT_SECONDS = NSProperties.stringForKey( "JettyWebSocketIdleTimeout" ) != null ? NSProperties.integerForKey( "JettyWebSocketIdleTimeout" ) : 0;
+	private static final int WEBSOCKET_IDLE_TIMEOUT_SECONDS = JettyAdaptorProperties.integer( "JettyWebSocketIdleTimeout", -1 );
 
 	/**
 	 * Creates a handler that supports both HTTP and WebSocket requests.
@@ -54,8 +55,11 @@ public class WOJettyWebSocketSupport implements JettyHandlerDecorator {
 		// Get the WebSocket container from the server
 		final ServerWebSocketContainer container = ServerWebSocketContainer.ensure( server );
 
-		container.setIdleTimeout( Duration.ofSeconds( WEBSOCKET_IDLE_TIMEOUT_SECONDS ) );
-		logger.info( "WebSocket idle timeout set to {} seconds (0 = infinite)", WEBSOCKET_IDLE_TIMEOUT_SECONDS );
+		if( WEBSOCKET_IDLE_TIMEOUT_SECONDS >= 0 ) {
+			container.setIdleTimeout( Duration.ofSeconds( WEBSOCKET_IDLE_TIMEOUT_SECONDS ) );
+		}
+
+		logger.info( "WebSocket idle timeout is {} (0 = infinite)", container.getIdleTimeout() );
 
 		// Create an upgrade handler that intercepts WebSocket upgrade requests
 		final WebSocketUpgradeHandler upgradeHandler = new WebSocketUpgradeHandler( container ) {

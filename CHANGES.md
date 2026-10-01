@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **WebSocket fixes**
+  In the experimental WebSocket support: a binary message no longer stops the session, which previously
+  received nothing further, not even the peer's CLOSE. A handler's `onBinaryMessage` gets a copy of the
+  payload it may keep, instead of a buffer Jetty recycles for later frames. With `JettyWebSocketIdleTimeout`
+  unset, Jetty's default idle timeout of 30 seconds applies instead of none, so a client that vanishes
+  without a CLOSE is eventually reaped; `0` still means none, and a value that isn't a number is an error.
+  The adaptor stops a handler's heartbeat after `onClose`, as `WOWebSocketHandler` documents. The listener
+  overrides the close callback Jetty will keep, not the one marked for removal. (#13)
+
 - **A numeric property that isn't a number stops the adaptor at startup**
   A typo such as `-DJettyMaxConcurrentRequests=5O` was read as 0, which for most of the adaptor's
   properties means "unset", so the concurrency limit, a timeout or the accept queue size was silently
