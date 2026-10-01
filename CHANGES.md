@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **A numeric property that isn't a number stops the adaptor at startup**
+  A typo such as `-DJettyMaxConcurrentRequests=5O` was read as 0, which for most of the adaptor's
+  properties means "unset", so the concurrency limit, a timeout or the accept queue size was silently
+  left at its default. Such a value is now an error naming the property and the value. An unset or blank
+  property still means the default, and surrounding whitespace is ignored. (#11)
+
 - **The WebSocket upgrade handler starts the chain it wraps**
   With the push module on the classpath and `JettyMaxConcurrentRequests` set, every request failed with a
   500: the upgrade handler called the rest of the chain without adopting it as a child, so the QoS handler
@@ -24,8 +30,7 @@
   response headers, unknown-length streaming, the unhandled-response fall-through, QoS and its excluded
   paths, port discovery and server-sent events. Adaptor self-selection, which happens while bundles load,
   has an integration test that launches a separate JVM against the packaged framework:
-  `mvn verify -Pintegration`. A test for the WebSocket and QoS combination is disabled until #10 is
-  fixed. (#15)
+  `mvn verify -Pintegration`. (#15)
 
 ## 2026-09-23 (0.12.1)
 

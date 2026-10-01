@@ -265,7 +265,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 	private static final int CONNECTOR_IDLE_TIMEOUT_SECONDS = connectorIdleTimeoutSeconds();
 
 	private static int connectorIdleTimeoutSeconds() {
-		final int configured = NSProperties.integerForKey( "JettyConnectorIdleTimeoutSeconds" );
+		final int configured = JettyAdaptorProperties.integer( "JettyConnectorIdleTimeoutSeconds", 0 );
 		return configured > 0 ? configured : 600;
 	}
 
@@ -280,7 +280,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 	private static final int LISTEN_QUEUE_SIZE = listenQueueSize();
 
 	private static int listenQueueSize() {
-		final int configured = NSProperties.integerForKey( "WOListenQueueSize" );
+		final int configured = JettyAdaptorProperties.integer( "WOListenQueueSize", 0 );
 		return configured > 0 ? configured : 511;
 	}
 
@@ -289,7 +289,7 @@ public class WOAdaptorJetty extends WOAdaptor {
 	 * backpressure, preserving the historical behaviour unless an app opts in. Recommended sizing is roughly your DB
 	 * connection pool size / downstream capacity; too low throttles throughput, too high defeats the purpose.
 	 */
-	private static final int MAX_CONCURRENT_REQUESTS = NSProperties.integerForKey( "JettyMaxConcurrentRequests" );
+	private static final int MAX_CONCURRENT_REQUESTS = JettyAdaptorProperties.integer( "JettyMaxConcurrentRequests", 0 );
 
 	/**
 	 * Property: comma-separated Jetty path specs (e.g. "/sse/*,/events/*") for requests that bypass the QoS limit
@@ -303,12 +303,12 @@ public class WOAdaptorJetty extends WOAdaptor {
 	 * Property: maximum number of requests allowed to wait in the QoS queue once the concurrency limit is reached. Beyond
 	 * this, excess requests are rejected (503) rather than queued, bounding memory under overload. 0 (default) = unlimited.
 	 */
-	private static final int MAX_SUSPENDED_REQUESTS = NSProperties.integerForKey( "JettyMaxSuspendedRequests" );
+	private static final int MAX_SUSPENDED_REQUESTS = JettyAdaptorProperties.integer( "JettyMaxSuspendedRequests", 0 );
 
 	/**
 	 * Property: how long (seconds) a request may wait in the QoS queue before timing out. 0 (default) = no timeout.
 	 */
-	private static final int MAX_SUSPEND_SECONDS = NSProperties.integerForKey( "JettyMaxSuspendSeconds" );
+	private static final int MAX_SUSPEND_SECONDS = JettyAdaptorProperties.integer( "JettyMaxSuspendSeconds", 0 );
 
 	/**
 	 * Wrap the given handler in a QoSHandler if (and only if) a concurrency limit has been configured. When
