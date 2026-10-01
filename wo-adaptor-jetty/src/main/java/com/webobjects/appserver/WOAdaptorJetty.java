@@ -400,19 +400,13 @@ public class WOAdaptorJetty extends WOAdaptor {
 				final String headerName = entry.getKey();
 				final NSArray<String> headerValues = entry.getValue();
 
-				// Note: You'd think you could always copy headers using the following logic, adding all the header values at the same time:
-				// 		jettyResponse.getHeaders().add( headerName, headerValues );
-				// However, using this method, Jetty will construct a single header and put all the values into a comma separated list.
-				// This is fine for most headers - but it breaks the set-cookie header since each cookie must get it's own set-cookie header.
-				// https://datatracker.ietf.org/doc/html/rfc6265#section-3
-				// For this reason, we add the set-cookie header one value at a time, each in it's own separate header
-				if( "set-cookie".equals( headerName ) ) {
-					for( final String headerValue : headerValues ) {
-						jettyResponse.getHeaders().add( headerName, headerValue );
-					}
-				}
-				else {
-					jettyResponse.getHeaders().add( headerName, headerValues );
+				// Each value gets a field of its own. Adding all of a header's values in one call would make Jetty join them into a
+				// single comma-separated field, which is only correct for headers whose syntax is a comma-separated list. It breaks
+				// Set-Cookie (each cookie must be its own field, RFC 6265 section 3), and it makes WWW-Authenticate and
+				// Proxy-Authenticate ambiguous, since a challenge's own parameters contain commas. Separate fields are equivalent to
+				// the joined form wherever joining is valid, so this is correct for every header, list-valued or not.
+				for( final String headerValue : headerValues ) {
+					jettyResponse.getHeaders().add( headerName, headerValue );
 				}
 			}
 
