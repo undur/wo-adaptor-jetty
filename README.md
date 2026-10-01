@@ -44,6 +44,15 @@ Time per request:       0.069 [ms] (mean, across all concurrent requests)
 Transfer rate:          3388922.70 [Kbytes/sec] received
 ```
 
+## Tests
+
+```
+mvn verify                 # the test suite
+mvn verify -Pintegration   # also the slower tests that launch a separate JVM against the packaged framework
+```
+
+The tests start the adaptor's default server on a free port in front of a real `WOApplication`, and talk raw HTTP to it. Each regression test names the fix it guards. The integration tests cover the adaptor selecting itself at startup, which happens while bundles load and so can only be observed in a freshly launched application.
+
 ## Experimental: server push
 
 Server-sent events and WebSockets. Both work and are in use, but their API may still change before it settles, so expect to adjust on upgrade.

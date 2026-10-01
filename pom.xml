@@ -12,6 +12,8 @@
 		<maven.compiler.release>25</maven.compiler.release>
 		<jetty.version>12.1.13</jetty.version>
 		<webobjects.version>5.4.3</webobjects.version>
+		<junit.version>6.1.3</junit.version>
+		<surefire.version>3.5.6</surefire.version>
 	</properties>
 
 	<!-- The modules share this reactor's version: a given version of wo-adaptor-jetty-push is built and tested against the same version of wo-adaptor-jetty -->
@@ -29,6 +31,32 @@
 				<extensions>true</extensions>
 			</plugin>
 		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${surefire.version}</version>
+					<configuration>
+						<!-- One fresh JVM per test class. The adaptor reads its configuration into static finals when it is
+						     loaded, and WOApplication is a per-JVM singleton, so a class that tests a configuration has to
+						     own the JVM it runs in. -->
+						<forkCount>1</forkCount>
+						<reuseForks>false</reuseForks>
+						<systemPropertyVariables>
+							<!-- WO reads ~/WebObjects.properties; point it at an empty home so the developer's settings
+							     (a global WOAdaptor, say) can't change what the tests observe -->
+							<user.home>${project.build.directory}/test-home</user.home>
+						</systemPropertyVariables>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-failsafe-plugin</artifactId>
+					<version>${surefire.version}</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 	<dependencyManagement>
@@ -53,6 +81,41 @@
 				<groupId>org.eclipse.jetty.websocket</groupId>
 				<artifactId>jetty-websocket-jetty-server</artifactId>
 				<version>${jetty.version}</version>
+			</dependency>
+
+			<!-- Tests -->
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-engine</artifactId>
+				<version>${junit.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-params</artifactId>
+				<version>${junit.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<!-- WOApplication's static initializer needs EOAccess, which pulls in log4j as it loads. The adaptor uses neither;
+			     the test harness needs them only to construct a WOApplication. -->
+			<dependency>
+				<groupId>com.webobjects</groupId>
+				<artifactId>JavaEOAccess</artifactId>
+				<version>${webobjects.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.reload4j</groupId>
+				<artifactId>reload4j</artifactId>
+				<version>1.2.26</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>is.rebbi</groupId>
+				<artifactId>wo-adaptor-jetty</artifactId>
+				<version>${project.version}</version>
+				<type>test-jar</type>
+				<scope>test</scope>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
