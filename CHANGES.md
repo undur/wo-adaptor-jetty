@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026-10-01 (0.12.2)
 
 - **Request paths may contain an encoded slash**
   A path segment with `%2F` in it, such as a file name containing `Etc/GMT`, was refused with
