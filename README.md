@@ -87,39 +87,7 @@ TICKER.broadcast( "tick", Instant.now().toString() );
 
 ## Changelog
 
-### 0.12.1 - 2026-09-23
-
-* Request paths may contain characters such as `|`, which Jetty's default URI compliance rejects with `400 Illegal Path Character` before the request reaches WebObjects. The classic adaptor passes such paths through, and URLs in the wild carry them. Suspicious characters (`\`, NUL, control characters), encoded slashes and path traversal are still rejected
-
-### 0.12.0 - 2026-09-19
-
-* The adaptor selects itself. The core module is now a WO framework whose principal class names the Jetty adaptor at bundle-loading time, so an application that depends on it no longer has to pass `-WOAdaptor WOAdaptorJetty`. An explicit `-WOAdaptor`, or the property set in a properties file, still wins
-
-### 0.11.0 - 2026-09-19
-
-* `SSEStream` writes an opening comment as soon as it is created, so the response is committed and its headers reach the client at once. Previously nothing was written until the first event or the first keep-alive, leaving the browser in "connecting" and every proxy in between looking at an idle connection it might time out
-* The default keep-alive interval is 10 seconds, down from 30. A WebObjects instance's adaptor configuration carries a `recvTimeout` that JavaMonitor defaults to 30 seconds and that modulo applies as the idle timeout of its connection to the instance; an interval equal to that timeout is a race the timeout can win, and a client answers an aborted stream by reconnecting, over and over, on a quiet feed
-
-### 0.10.0 - 2026-09-17
-
-* Server-sent events: `SSEStream` and `SSEHub` in the push module
-* Responses with a content stream of unknown length are streamed with chunked transfer encoding until the stream ends, instead of being sent with a `Content-Length` of 0
-* `JettyQoSExcludedPaths`: path specs that bypass the QoS concurrency limit, for long-lived responses
-* The websocket module is renamed `wo-adaptor-jetty-push`, since it now holds server push in general
-* SSE responses send `Cache-Control: no-store`; the Firefox request-coalescing gotcha for repeated stream URLs is documented in `SSEStream`
-
-### 0.9.0 - 2026-09-15
-
-First release. In production use since November 2025; published as a pre-release ahead of 1.0 while the package name and configuration surface are finalised.
-
-* Two modules sharing one version: `wo-adaptor-jetty` (the adaptor) and `wo-adaptor-jetty-push` (experimental WebSocket support, enabled by its presence on the classpath through the `JettyHandlerDecorator` extension point)
-* Optional request backpressure via a Jetty `QoSHandler`: `JettyMaxConcurrentRequests`, `JettyMaxSuspendedRequests`, `JettyMaxSuspendSeconds`
-* Connector idle timeout (`JettyConnectorIdleTimeoutSeconds`, default 600) and accept queue size honoring WO's `WOListenQueueSize` (default 511)
-* Request bodies sent without a `Content-Length` are answered with `411 Length Required` instead of being silently treated as empty
-* Repeated same-name request headers are no longer dropped
-* Port discovery for `WOPort` 0 uses the first network connector and fails clearly if there is none
-* `WOAdaptorJetty.UNHANDLED_RESPONSE_KEY`: a documented contract for letting a request fall through to the next Jetty handler
-* `JettyServerProvider` lets an application build the Jetty server itself
+See [CHANGES.md](CHANGES.md).
 
 <!--
 ## WebSockets
