@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Request paths may contain an encoded slash**
+  A path segment with `%2F` in it, such as a file name containing `Etc/GMT`, was refused with
+  `400 Ambiguous URI path separator` before the request reached WebObjects. The path now reaches WO still
+  encoded, so the segment is decoded by WO and the path's structure is kept. Encoded `.` and `..` segments
+  are still refused. (#9)
+
 - **Smaller fixes from review**
   Stopping an adaptor whose startup failed before its server was created no longer throws. A failure to
   start the server is logged before the application exits, instead of printed to stderr. Response content

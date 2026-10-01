@@ -233,7 +233,11 @@ public class WOAdaptorJetty extends WOAdaptor {
 		// Jetty's default URI compliance refuses characters such as '|' in a request path with "400 Illegal Path
 		// Character". WebObjects applications have always accepted them (the classic adaptor passes the path through
 		// as-is), and URLs in the wild carry them, so they are allowed here.
-		config.setUriCompliance( UriCompliance.DEFAULT.with( "WebObjects", UriCompliance.Violation.ILLEGAL_PATH_CHARACTERS ) );
+		//
+		// The same goes for an encoded slash in a path segment, such as a file name containing "Etc/GMT", which Jetty
+		// refuses with "400 Ambiguous URI path separator". The path reaches WO still encoded, so WO decodes the segment
+		// itself and the path's structure is kept. Encoded dot segments remain refused.
+		config.setUriCompliance( UriCompliance.DEFAULT.with( "WebObjects", UriCompliance.Violation.ILLEGAL_PATH_CHARACTERS, UriCompliance.Violation.AMBIGUOUS_PATH_SEPARATOR ) );
 		config.setSendServerVersion( false ); // Not sending the server software/version is good practice for security
 
 		final HttpConnectionFactory connectionFactory = new HttpConnectionFactory( config );

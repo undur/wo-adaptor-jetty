@@ -34,8 +34,19 @@ public class RequestPathTest {
 		assertEquals( "GET /a|b", response.bodyString() );
 	}
 
+	/**
+	 * An encoded slash is part of a segment, not a separator. It reaches WO still encoded, so the path's structure is kept
+	 * (#9).
+	 */
+	@Test
+	public void encodedSlashInASegmentReachesTheApplicationEncoded() {
+		final RawHttp.Response response = server.http().get( "/document/2008-10-01+Etc%2FGMT.jpg" );
+		assertEquals( 200, response.status() );
+		assertEquals( "GET /document/2008-10-01+Etc%2FGMT.jpg", response.bodyString() );
+	}
+
 	@ParameterizedTest
-	@ValueSource(strings = { "/a\\b", "/a%00b", "/a%09b", "/a%2Fb", "/../etc" })
+	@ValueSource(strings = { "/a\\b", "/a%00b", "/a%09b", "/../etc", "/a/%2E%2E/etc", "/a/%2e/b" })
 	public void suspiciousPathsAreStillRefused( final String path ) {
 		assertEquals( 400, server.http().get( path ).status(), path );
 	}
