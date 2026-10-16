@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Jetty 12.1.14**
+  Up from 12.1.13.
+
 ## 2026-10-01 (0.12.2)
 
 - **Request paths may contain an encoded slash**
