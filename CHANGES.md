@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026-10-18 (0.12.3)
 
 - **Request header names are merged case-insensitively**
   Fields whose names differed only in case, such as `remote_addr` and `REMOTE_ADDR`, reached WO as one
