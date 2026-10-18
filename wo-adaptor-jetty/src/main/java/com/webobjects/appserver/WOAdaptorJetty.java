@@ -556,8 +556,15 @@ public class WOAdaptorJetty extends WOAdaptor {
 			// Note: we deliberately use HttpField.getValue() (the raw single value), NOT getValueList(), because the latter
 			// splits a single header's value on commas before WO sees it, corrupting values that legitimately contain commas
 			// (cookies, dates, etc). See commit cef4670.
+			//
+			// Names are compared case-insensitively, as HTTP requires, by keying the map on the lowercased name. Fields whose
+			// names differ only in case are one header, and WO keeps only one entry per name, so keying by the name as sent
+			// let one of them silently replace the other, depending on the map's iteration order. That is a security
+			// problem, not just lost data: behind Apache, mod_WebObjects adds REMOTE_ADDR after copying the client's own
+			// headers, so a client sending remote_addr could pick the address the application saw. With both values under
+			// one name, the application can see there are two.
 			for( final HttpField httpField : jettyRequest.getHeaders() ) {
-				final String name = httpField.getName();
+				final String name = httpField.getLowerCaseName();
 				final String value = httpField.getValue();
 
 				final List<String> existing = map.get( name );

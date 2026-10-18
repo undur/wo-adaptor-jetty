@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Request header names are merged case-insensitively**
+  Fields whose names differed only in case, such as `remote_addr` and `REMOTE_ADDR`, reached WO as one
+  header with only one of the values, chosen by hash-map iteration order. Behind Apache, where
+  mod_WebObjects adds `REMOTE_ADDR` after copying the client's headers, a client could thereby choose the
+  address the application saw. Every value of a header now arrives under one name, in the order the fields
+  came, so an application can see that an address header has more than one value and refuse it. (#17)
+
 - **Jetty 12.1.14**
   Up from 12.1.13.
 
