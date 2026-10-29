@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **The QoS test no longer depends on the build machine's CPU count**
+  `QoSTest.excludedPathsBypassTheLimit` sent its three concurrent requests from the JVM's common pool,
+  which has one thread fewer than the machine has CPUs. With three CPUs it had two threads, both taken by
+  the requests that wait, so the third request was never sent and the test timed out. The test now sends
+  them from threads of its own.
+
 ## 2026-10-18 (0.12.3)
 
 - **Request header names are merged case-insensitively**

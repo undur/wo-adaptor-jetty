@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jetty.server.handler.QoSHandler;
@@ -47,7 +49,10 @@ public class QoSTest {
 
 	/**
 	 * While one request holds the only permit, a request to an excluded path is served at once, and any other request
-	 * waits for the permit
+	 * waits for the permit.
+	 *
+	 * The requests are sent from threads of the test's own: the common pool may have only two, which the held and the
+	 * queued request occupy, leaving the excluded request unsent.
 	 */
 	@Test
 	public void excludedPathsBypassTheLimit() throws Exception {
@@ -69,20 +74,27 @@ public class QoSTest {
 			return TestApplication.echo( request );
 		} );
 
-		final CompletableFuture<RawHttp.Response> held = CompletableFuture.supplyAsync( () -> server.http().get( "/hold" ) );
-		assertTrue( holding.await( 5, TimeUnit.SECONDS ), "the first request holds the permit" );
+		final ExecutorService clients = Executors.newCachedThreadPool();
 
-		final CompletableFuture<RawHttp.Response> queued = CompletableFuture.supplyAsync( () -> server.http().get( "/ordinary" ) );
-		final RawHttp.Response excluded = CompletableFuture.supplyAsync( () -> server.http().get( "/events/feed" ) ).get( 3, TimeUnit.SECONDS );
+		try {
+			final CompletableFuture<RawHttp.Response> held = CompletableFuture.supplyAsync( () -> server.http().get( "/hold" ), clients );
+			assertTrue( holding.await( 5, TimeUnit.SECONDS ), "the first request holds the permit" );
 
-		assertEquals( 200, excluded.status(), "the excluded path is served while the permit is taken" );
-		assertEquals( "GET /events/feed", excluded.bodyString() );
+			final CompletableFuture<RawHttp.Response> queued = CompletableFuture.supplyAsync( () -> server.http().get( "/ordinary" ), clients );
+			final RawHttp.Response excluded = CompletableFuture.supplyAsync( () -> server.http().get( "/events/feed" ), clients ).get( 3, TimeUnit.SECONDS );
 
-		Thread.sleep( 500 );
-		assertFalse( queued.isDone(), "an ordinary request waits for the permit" );
+			assertEquals( 200, excluded.status(), "the excluded path is served while the permit is taken" );
+			assertEquals( "GET /events/feed", excluded.bodyString() );
 
-		release.countDown();
-		assertEquals( 200, held.get( 5, TimeUnit.SECONDS ).status() );
-		assertEquals( 200, queued.get( 5, TimeUnit.SECONDS ).status() );
+			Thread.sleep( 500 );
+			assertFalse( queued.isDone(), "an ordinary request waits for the permit" );
+
+			release.countDown();
+			assertEquals( 200, held.get( 5, TimeUnit.SECONDS ).status() );
+			assertEquals( 200, queued.get( 5, TimeUnit.SECONDS ).status() );
+		}
+		finally {
+			clients.shutdownNow();
+		}
 	}
 }
