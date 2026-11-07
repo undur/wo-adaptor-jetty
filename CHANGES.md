@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026-11-07 (0.12.4)
 
 - **WebObjects is a provided dependency**
   The adaptors no longer bring `com.webobjects:JavaWebObjects` 5.4.3 and the artifacts it depends on into the
