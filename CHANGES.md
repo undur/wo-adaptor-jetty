@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **WebObjects is a provided dependency**
+  The adaptors no longer bring `com.webobjects:JavaWebObjects` 5.4.3 and the artifacts it depends on into the
+  application, so an application can use whichever WebObjects artifacts it builds with. An application that
+  got WebObjects only through the adaptor now has to declare it itself.
+
 - **The QoS test no longer depends on the build machine's CPU count**
   `QoSTest.excludedPathsBypassTheLimit` sent its three concurrent requests from the JVM's common pool,
   which has one thread fewer than the machine has CPUs. With three CPUs it had two threads, both taken by

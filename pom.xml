@@ -61,10 +61,12 @@
 
 	<dependencyManagement>
 		<dependencies>
+			<!-- Provided: the application brings its own WebObjects, whichever artifacts it uses for it -->
 			<dependency>
 				<groupId>com.webobjects</groupId>
 				<artifactId>JavaWebObjects</artifactId>
 				<version>${webobjects.version}</version>
+				<scope>provided</scope>
 				<exclusions>
 					<exclusion>
 						<groupId>com.webobjects</groupId>
