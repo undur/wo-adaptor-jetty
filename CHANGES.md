@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-08 (0.12.6)
+
+- **The adaptor jar is built for Java 21**
+  0.12.5's `wo-adaptor-jetty` jar still held classes compiled for Java 25, left over from an earlier build,
+  so it still needed JDK 25. 0.12.6 is built from clean and runs on JDK 21 and newer. `wo-adaptor-jetty-push`
+  0.12.5 was already built for 21.
+
 ## 2026-11-08 (0.12.5)
 
 - **Runs on JDK 21**
