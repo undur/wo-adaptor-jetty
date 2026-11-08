@@ -4,7 +4,7 @@ A Jetty-based WOAdaptor. Based on Jetty's own servlet-free APIs making it's rela
 
 ## Usage
 
-Releases are deployed to the WOCommunity maven repository, so if your environment is set up for WO development just add the dependency to your `pom`. The adaptor selects itself at startup, so no launch argument is needed; pass `-WOAdaptor` explicitly only when you want some other adaptor. Requires JDK 25.
+Releases are deployed to the WOCommunity maven repository, so if your environment is set up for WO development just add the dependency to your `pom`. The adaptor selects itself at startup, so no launch argument is needed; pass `-WOAdaptor` explicitly only when you want some other adaptor. Requires JDK 21 or newer.
 
 ```xml
 <dependency>

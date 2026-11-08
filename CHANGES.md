@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Runs on JDK 21**
+  The adaptors are compiled for Java 21, down from 25, since they use nothing newer. They run on 21 and
+  everything after it.
+
 ## 2026-11-07 (0.12.4)
 
 - **WebObjects is a provided dependency**
