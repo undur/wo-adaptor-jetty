@@ -10,7 +10,7 @@ Releases are deployed to the WOCommunity maven repository, so if your environmen
 <dependency>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty</artifactId>
-	<version>0.12.4</version>
+	<version>0.12.5</version>
 </dependency>
 ```
 ## Why?
@@ -64,7 +64,7 @@ Server push lives in a separate module, `wo-adaptor-jetty-push`, released togeth
 <dependency>
 	<groupId>is.rebbi</groupId>
 	<artifactId>wo-adaptor-jetty-push</artifactId>
-	<version>0.12.4</version>
+	<version>0.12.5</version>
 </dependency>
 ```
 

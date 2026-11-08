@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026-11-08 (0.12.5)
 
 - **Runs on JDK 21**
   The adaptors are compiled for Java 21, down from 25, since they use nothing newer. They run on 21 and
